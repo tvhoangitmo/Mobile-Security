@@ -1,0 +1,196 @@
+Purpose: This is a challenge involving AES encryption and MD5 hashing. The goal is to find any (KEY, FLAG) pair that the checkFlag function returns true.
+
+
+I) com.mobisec.blockchain.FlagChecker Logic:
+1. Generate an AES key from a user's key:
+    byte[] fullKey = keyStr.getBytes();
+    byte[] digest = hash(fullKey); // MD5(fullKey)
+    byte[] key = {digest[0], digest[digest.length / 2], digest[digest.length - 1]};
+
+--> The key consists of only 3 bytes: the first byte, the middle byte, and the last byte of the MD5 (full key).
+
+2. Initialization:
+    byte[] currKey = hash(key); // currKey = MD5(3-byte key)
+    byte[] currPt = flagStr.getBytes();
+
+3. Encryption loop 10 times:
+    for (int i = 0; i < 10; i++) {
+        byte[] newPt = encrypt(currPt, currKey); // AES-ECB encrypt
+        currPt = newPt;
+        currKey = hash(currKey); // currKey = MD5(currKey) cho lần sau
+    }
+
+--> currPt (the intermediate ciphertext) is encrypted using AES-ECB with the currKey key.
+--> After each encryption, the key is updated with its own MD5 hash.
+
+4. Encrypt & padding:
+    public static byte[] encrypt(byte[] in, byte[] key) throws Exception {
+        Key aesKey = new SecretKeySpec(key, "AES");
+        Cipher encryptCipher = Cipher.getInstance("AES/ECB/PKCS5Padding");
+        encryptCipher.init(1, aesKey);
+        ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+        CipherOutputStream cipherOutputStream = new CipherOutputStream(outputStream, encryptCipher);
+        cipherOutputStream.write(in);
+        cipherOutputStream.flush();
+        cipherOutputStream.close();
+        byte[] out = outputStream.toByteArray();
+        return out;
+    }
+
+5. Compare:
+    return toHex(currPt).equals("0eef68c5e...7b");
+--> After 10 encoding steps, the final ciphertext must match a fixed-length hexadecimal string (512 hexadecimal characters = 256 bytes).
+
+6. Conclusion:
+We need to find a FLAG such that after 10 consecutive AES-ECB attempts with MD5 keys, we get a fixed ciphertext. Moreover, CipherOutputStream uses PKCS5Padding. When decoding, we need to handle the padding correctly.
+
+II) Solution: Brute force KEY, Reverse FLAG
+1. Brute all possible KEYs:
+    The key is 3 bytes taken from the MD5 hash of the fullKey (entered by the user).
+    However, the fullKey can be any length, so brute-forcing the fullKey is infinite. However, we are only interested in the 3 resulting bytes (digest[0], digest[16], digest[31]).
+    The key space (3 bytes) only has 256^3 = 16,777,216 possibilities.
+
+2. For each key (3 bytes):
+    Calculate currKey = MD5(key) (16 bytes).
+    Reverse decryption:
+        The final output (currPt after 10 rounds) is known (from the hex string).
+		We need to find the original currPt (flagStr.getBytes()).
+		Since this is AES-ECB, reverse decryption is possible step by step if the key is known.
+		The key changes every round: currKey_i = MD5(currKey_{i-1}).
+
+III) Scripts:
+Script 1:
+import hashlib
+from Crypto.Cipher import AES
+from Crypto.Util.Padding import unpad
+import sys
+
+TARGET_HEX = "0eef68c5ef95b67428c178f045e6fc8389b36a67bbbd800148f7c285f938a24e696ee2925e12ecf7c11f35a345a2a142639fe87ab2dd7530b29db87ca71ffda2af558131d7da615b6966fb0360d5823b79c26608772580bf14558e6b7500183ed7dfd41dbb5686ea92111667fd1eff9cec8dc29f0cfe01e092607da9f7c2602f5463a361ce5c83922cb6c3f5b872dcc088eb85df80503c92232bf03feed304d669ddd5ed1992a26674ecf2513ab25c20f95a5db49fdf6167fda3465a74e0418b2ea99eb2673d4c7e1ff7c4921c4e2d7b"
+
+def md5(data):
+    return hashlib.md5(data).digest()
+
+def aes_ecb_decrypt(ciphertext, key):
+    """Giải mã AES-ECB và loại bỏ PKCS5/PKCS7 padding."""
+    cipher = AES.new(key, AES.MODE_ECB)
+    decrypted = cipher.decrypt(ciphertext)
+    try:
+        return unpad(decrypted, AES.block_size)
+    except ValueError:
+        return decrypted
+
+def is_printable_flag(data):
+    """Kiểm tra xem dữ liệu giải mã có phải là flag hợp lệ không."""
+    try:
+        text = data.decode('utf-8')
+        if all(32 <= ord(c) < 127 for c in text):
+            # In ra để debug
+            if len(text) < 100 and ('MOBISEC' in text or 'flag' in text.lower() or '{' in text):
+                return True
+            # Nếu text ngắn (dưới 50 ký tự), có thể là flag
+            if len(text) < 50:
+                return True
+    except UnicodeDecodeError:
+        pass
+    return False
+
+def main():
+    try:
+        target_bytes = bytes.fromhex(TARGET_HEX)
+    except ValueError:
+        print("❌ LỖI: Chuỗi HEX không hợp lệ.")
+        sys.exit(1)
+
+    print(f"[*] Bắt đầu brute force 3-byte key...")
+    print(f"[*] Kích thước bản mã: {len(target_bytes)} bytes")
+
+    found = False
+    for key_int in range(0x1000000):
+        key_3bytes = key_int.to_bytes(3, 'big')
+
+        # Tạo chuỗi khóa
+        key_chain = []
+        curr_key = key_3bytes
+        for _ in range(10):
+            curr_key = md5(curr_key)
+            key_chain.append(curr_key)
+
+        # Giải mã ngược
+        curr_ct = target_bytes
+        try:
+            for i in range(9, -1, -1):
+                aes_key = key_chain[i]
+                curr_ct = aes_ecb_decrypt(curr_ct, aes_key)
+        except Exception as e:
+            continue
+
+        # Kiểm tra
+        if is_printable_flag(curr_ct):
+            print(f"\n🎉 TÌM THẤY!")
+            print(f"   KEY 3-byte: {key_3bytes.hex()}")
+            print(f"   FLAG: {curr_ct.decode('utf-8')}")
+
+            # Tìm KEY đầu vào đơn giản
+            for test_key in [b"a", b"b", b"1", b"key", b"123", b"AAA", b"xyz", b"password"]:
+                digest = md5(test_key)
+                if digest[0] == key_3bytes[0] and digest[16] == key_3bytes[1] and digest[31] == key_3bytes[2]:
+                    print(f"   KEY đơn giản: '{test_key.decode()}'")
+                    found = True
+                    break
+
+            if not found:
+                print(f"   (Dùng flag trên với KEY bất kỳ hash ra 3-byte: {key_3bytes.hex()})")
+            break
+
+        # Tiến độ
+        if key_int % 1000000 == 0:
+            print(f"[+] Đã thử: {key_int//1000000}/16 triệu")
+
+    if not found:
+        print("\n❌ Không tìm thấy. Có thể cần điều chỉnh điều kiện tìm kiếm.")
+
+if __name__ == "__main__":
+    main()
+
+Result script 1:
+[*] Bắt đầu brute force 3-byte key...
+[*] Kích thước bản mã: 208 bytes
+[+] Đã thử: 0/16 triệu
+[+] Đã thử: 1/16 triệu
+[+] Đã thử: 2/16 triệu
+[+] Đã thử: 3/16 triệu
+[+] Đã thử: 4/16 triệu
+[+] Đã thử: 5/16 triệu
+[+] Đã thử: 6/16 triệu
+[+] Đã thử: 7/16 triệu
+[+] Đã thử: 8/16 triệu
+[+] Đã thử: 9/16 triệu
+
+🎉 TÌM THẤY!
+   KEY 3-byte: 8e09ae
+   FLAG: MOBISEC{blockchain_failed_to_deliver_once_again}
+   (Dùng flag trên với KEY bất kỳ hash ra 3-byte: 8e09ae)
+
+❌ Không tìm thấy. Có thể cần điều chỉnh điều kiện tìm kiếm.
+
+Script 2:
+# Tạo KEY từ target trực tiếp (không phải lúc nào cũng được)
+# Nhưng bạn có thể brute force KEY dài hơn
+
+import hashlib
+import random
+
+target = (0x8e, 0x09, 0xae)
+
+while True:
+    # Tạo KEY ngẫu nhiên 10-20 ký tự
+    key = bytes([random.randint(32, 126) for _ in range(random.randint(10, 20))])
+    digest = hashlib.md5(key).digest()
+    if (digest[0], digest[8], digest[15]) == target:
+        print(f"KEY: '{key.decode()}'")
+        print(f"MD5: {digest.hex()}")
+        break
+		
+Result script 2:
+KEY: 'q>6fHk:d`$!(-OK '
+MD5: 8ea551aa3d18c2a809e22231e9cc4bae
