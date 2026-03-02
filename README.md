@@ -18,21 +18,21 @@ This repository contains solution reports for various MobiSec challenges, coveri
 
 ### Reversing Challenges
 
-1. **babyrev** - *(Report pending)*
-2. **pincode** - *(Report pending)*
-3. **gnirts** - *(Report pending)*
-4. **goingnative** - *(Report pending)*
-5. **blockchain** - *(Report pending)*
-6. **loadme** - *(Report pending)*
-7. **upos** - *(Report pending)*
+1. **[babyrev](reversing/babyrev/babyrev.md)** - Basic flag format and ROT13 checks
+2. **[pincode](reversing/pincode/pincode.md)** - Iterative MD5 PIN validation with remote flag fetch
+3. **[gnirts](reversing/gnirts/gnirts.md)** - Split-flag hashing and reflection-based checks
+4. **[goingnative](reversing/goingnative/goingnative.md)** - JNI-based flag validation combining Java and native code
+5. **[blockchain](reversing/blockchain/blockchain.md)** - AES/MD5 "blockchain" style encryption and brute force
+6. **[loadme](reversing/loadme/loadme.md)** - Dynamic code loading with multiple staged loaders
+7. **[upos](reversing/upos/upos.md)** - Obfuscated validator with smali patching and matrix checks
 
 ### Exploitation Challenges
 
-1. **frontdoor** - *(Report pending)*
-2. **nojumpstarts** - *(Report pending)*
-3. **fortnite** - *(Report pending)*
-4. **keyboard** - *(Report pending)*
-5. **filebrowser** - *(Report pending)*
+1. **[frontdoor](exploitation/frontdoor/frontdoor.md)** - HTTP endpoint abuse with hardcoded credentials
+2. **[nojumpstarts](exploitation/nojumpstarts/nojumpstarts.md)** - Component hijacking with leaked RSA private key
+3. **[fortnite](exploitation/fortnite/fortnite.md)** - External DEX replacement and payload execution
+4. **[keyboard](exploitation/TB/keyboard/keyboard.md)** - Zip Slip update mechanism to overwrite prefs
+5. **[filebrowser](exploitation/TB/filebrowser/filebrowser.md)** - PendingIntent command injection and DB exfiltration
 
 ---
 
@@ -50,15 +50,15 @@ This repository contains solution reports for various MobiSec challenges, coveri
 | jokeprovider | `MOBISEC{lol_roftl_ahahah_:D_REYAMMER_TELLS_THE_BEST_JOKES!}` |
 | unbindable | `MOBISEC{please_respect_my_will_you_shall_not_bind_me_my_friend}` |
 | serialintent | `MOBISEC{HOW_DID_YOU_DO_IT_THAT_WAS_SERIALLY_PRIVATE_STUFF1!!1!eleven!}` |
-| babyrev | |
-| pincode | |
-| gnirts | |
-| goingnative | |
-| blockchain | |
-| loadme | |
-| upos | |
-| frontdoor | |
-| nojumpstarts | |
-| fortnite | |
-| keyboard | |
-| filebrowser | |
+| babyrev | `MOBISEC{ThIs_iS_A_ReAlLy_bAsIc_rEv}` |
+| pincode | `MOBISEC{local_checks_can_be_very_bad_for_security}` |
+| gnirts | `MOBISEC{peppa-9876543-BAAAM-A1z9-3133337}` |
+| goingnative | `MOBISEC{native_is_so-031337}` |
+| blockchain | `MOBISEC{blockchain_failed_to_deliver_once_again}` |
+| loadme | `MOBISEC{dynamic_code_loading_can_make_everything_tricky_eh?}` |
+| upos | `MOBISEC{Isnt_this_a_truly_evil_undebuggable_piece_of_sh^W_software??}` |
+| frontdoor | `MOBISEC{noob_hackers_only_check_for_backdoors}` |
+| nojumpstarts | `MOBISEC{you_shall_not_jump_ok?pretty_please?}` |
+| fortnite | `MOBISEC{players_gonna_play_mobisec_hackers_gonna_mobisec_it_up}` |
+| keyboard | `MOBISEC{the_more_emoji_a_keyboard_has_the_more_secure_it_is}` |
+| filebrowser | `MOBISEC{a_good_file_browser_would_gimme_the_flag_with_no_hacks}` |
