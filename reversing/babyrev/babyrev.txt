@@ -1,0 +1,148 @@
+--MainActivity--
+package com.mobisec.babyrev;
+
+import android.os.Bundle;
+import android.support.v4.internal.view.SupportMenu;
+import android.support.v7.app.AppCompatActivity;
+import android.text.Editable;
+import android.text.TextWatcher;
+import android.view.View;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.TextView;
+
+/* loaded from: classes.dex */
+public class MainActivity extends AppCompatActivity {
+    TextView mResultWidget = null;
+
+    @Override // android.support.v7.app.AppCompatActivity, android.support.v4.app.FragmentActivity, android.support.v4.app.SupportActivity, android.app.Activity
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+        final EditText flagWidget = (EditText) findViewById(R.id.flag);
+        Button checkFlag = (Button) findViewById(R.id.checkflag);
+        final TextView resultWidget = (TextView) findViewById(R.id.result);
+        this.mResultWidget = resultWidget;
+        flagWidget.addTextChangedListener(new TextWatcher() { // from class: com.mobisec.babyrev.MainActivity.1
+            @Override // android.text.TextWatcher
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
+
+            @Override // android.text.TextWatcher
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                MainActivity.this.mResultWidget.setText(BuildConfig.FLAVOR);
+            }
+
+            @Override // android.text.TextWatcher
+            public void afterTextChanged(Editable s) {
+            }
+        });
+        checkFlag.setOnClickListener(new View.OnClickListener() { // from class: com.mobisec.babyrev.MainActivity.2
+            @Override // android.view.View.OnClickListener
+            public void onClick(View v) {
+                String msg;
+                int color;
+                String flag = flagWidget.getText().toString();
+                boolean result = FlagChecker.checkFlag(MainActivity.this, flag);
+                if (result) {
+                    msg = "Valid flag!";
+                    color = -16737536;
+                } else {
+                    msg = "Invalid flag";
+                    color = SupportMenu.CATEGORY_MASK;
+                }
+                resultWidget.setText(msg);
+                resultWidget.setTextColor(color);
+            }
+        });
+    }
+}
+
+
+--FlagChecker--
+package com.mobisec.babyrev;
+
+import android.content.Context;
+
+/* loaded from: classes.dex */
+public class FlagChecker {
+    public static boolean checkFlag(Context ctx, String flag) {
+        if (!flag.startsWith("MOBISEC{") || new StringBuilder(flag).reverse().toString().charAt(0) != '}' || flag.length() != 35 || !flag.toLowerCase().substring(8).startsWith("this_is_") || !new StringBuilder(flag).reverse().toString().toLowerCase().substring(1).startsWith(ctx.getString(R.string.last_part)) || flag.charAt(17) != '_' || flag.charAt((int) (getY() * Math.pow(getX(), getY()))) != flag.charAt(((int) Math.pow(Math.pow(2.0d, 2.0d), 2.0d)) + 1) || !bam(flag.toUpperCase().substring(getY() * getX() * getY(), (int) (Math.pow(getZ(), getX()) - 1.0d))).equals("ERNYYL") || flag.toLowerCase().charAt(16) != 'a' || flag.charAt(16) != flag.charAt(26) || flag.toUpperCase().charAt(25) != flag.toUpperCase().charAt(26) + 1) {
+            return false;
+        }
+        String r = getR();
+        return flag.substring(8, flag.length() - 1).matches(r);
+    }
+
+    private static int getX() {
+        return 2;
+    }
+
+    private static int getY() {
+        return 3;
+    }
+
+    private static int getZ() {
+        return 5;
+    }
+
+    private static String bam(String s) {
+        String out = BuildConfig.FLAVOR;
+        for (int i = 0; i < s.length(); i++) {
+            char c = s.charAt(i);
+            if (c >= 'a' && c <= 'm') {
+                c = (char) (c + '\r');
+            } else if (c >= 'A' && c <= 'M') {
+                c = (char) (c + '\r');
+            } else if (c >= 'n' && c <= 'z') {
+                c = (char) (c - '\r');
+            } else if (c >= 'N' && c <= 'Z') {
+                c = (char) (c - '\r');
+            }
+            out = out + c;
+        }
+        return out;
+    }
+
+    public static String getR() {
+        String r = BuildConfig.FLAVOR;
+        boolean upper = true;
+        for (int i = 0; i < 26; i++) {
+            r = upper ? r + "[A-Z_]" : r + "[a-z_]";
+            upper = !upper;
+        }
+        return r;
+    }
+}
+
+
+--AndroidManifest--
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    android:versionCode="1"
+    android:versionName="1.0"
+    android:compileSdkVersion="28"
+    android:compileSdkVersionCodename="9"
+    package="com.mobisec.babyrev"
+    platformBuildVersionCode="28"
+    platformBuildVersionName="9">
+    <uses-sdk
+        android:minSdkVersion="21"
+        android:targetSdkVersion="28"/>
+    <application
+        android:theme="@style/AppTheme"
+        android:label="@string/app_name"
+        android:icon="@mipmap/ic_launcher"
+        android:debuggable="true"
+        android:allowBackup="true"
+        android:supportsRtl="true"
+        android:roundIcon="@mipmap/ic_launcher_round"
+        android:appComponentFactory="android.support.v4.app.CoreComponentFactory">
+        <activity android:name="com.mobisec.babyrev.MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>

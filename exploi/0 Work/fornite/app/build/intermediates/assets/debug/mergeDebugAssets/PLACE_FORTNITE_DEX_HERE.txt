@@ -1,0 +1,1 @@
+Run ./gradlew :payload:makeDex to generate app/src/main/assets/fortnite.dex

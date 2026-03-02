@@ -95,6 +95,3 @@ private String bytesToHex(byte[] bytes) {
 
 **Flag**: `MOBISEC{Was_it_known_that_these_one_way_functions_give_you_back_flags?}`
 
-## Optional Feedback
-
-I really liked this challenge because it helped me understand Android Intent communication between apps and how to use ContentResolver to read files securely with proper permissions.

